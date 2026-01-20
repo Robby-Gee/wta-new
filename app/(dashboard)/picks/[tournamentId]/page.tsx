@@ -24,12 +24,13 @@ export default async function PicksPage({
     notFound()
   }
 
-  if (tournament.status !== 'UPCOMING') {
+  // TODO: Change back to 'UPCOMING' only after backfilling existing picks
+  if (tournament.status === 'COMPLETED') {
     return (
       <div className="max-w-4xl mx-auto text-center py-16">
         <h1 className="text-2xl font-bold mb-4">Picks Locked</h1>
         <p className="text-gray-600">
-          This tournament has already started. Picks are no longer available.
+          This tournament has completed. Picks are no longer available.
         </p>
       </div>
     )

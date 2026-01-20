@@ -22,8 +22,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 })
     }
 
-    if (tournament.status !== 'UPCOMING') {
-      return NextResponse.json({ error: 'Tournament has already started' }, { status: 400 })
+    // TODO: Change back to 'UPCOMING' only after backfilling existing picks
+    if (tournament.status === 'COMPLETED') {
+      return NextResponse.json({ error: 'Tournament has completed' }, { status: 400 })
     }
 
     // Get all data needed for budget calculation
