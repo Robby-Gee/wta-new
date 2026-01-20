@@ -191,7 +191,7 @@ export default function AdminResultsPage() {
               {/* Picks Summary */}
               {picks.length > 0 && (
                 <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-                  <h2 className="font-semibold mb-4">Players Picked ({[...new Set(picks.map(p => p.player.id))].length} unique players)</h2>
+                  <h2 className="font-semibold mb-4">Players Picked ({Array.from(new Set(picks.map(p => p.player.id))).length} unique players)</h2>
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
                     {/* Group picks by player */}
                     {Object.entries(
