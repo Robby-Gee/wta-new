@@ -6,6 +6,9 @@ export default async function LeaderboardPage() {
   const session = await getServerSession(authOptions)
 
   const users = await prisma.user.findMany({
+    where: {
+      hiddenFromLeaderboard: false,
+    },
     include: {
       picks: {
         include: { player: true },

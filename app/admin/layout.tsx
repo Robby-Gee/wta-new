@@ -32,6 +32,9 @@ export default async function AdminLayout({
             <Link href="/admin/results" className="hover:text-wta-pink">
               Results
             </Link>
+            <Link href="/admin/users" className="hover:text-wta-pink">
+              Users
+            </Link>
           </nav>
         </div>
       </div>
