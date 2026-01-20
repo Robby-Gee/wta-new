@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error saving picks:', error)
-    return NextResponse.json({ error: 'Failed to save picks' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Failed to save picks'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
