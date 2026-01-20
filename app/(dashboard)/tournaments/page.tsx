@@ -28,7 +28,7 @@ export default async function TournamentsPage() {
           </h2>
           <div className="space-y-3">
             {groupedTournaments.active.map(tournament => (
-              <TournamentCard key={tournament.id} tournament={tournament} />
+              <TournamentCard key={tournament.id} tournament={tournament} showPickLink />
             ))}
           </div>
         </section>
