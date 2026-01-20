@@ -49,7 +49,7 @@ export async function fetchCurrentRankings(): Promise<{
     // Tennis Abstract format: Rank, Player, Country/Flag, Points, etc.
     if (cells.length >= 3) {
       const rank = parseInt(cells[0])
-      if (!isNaN(rank) && rank <= 150) {
+      if (!isNaN(rank) && rank <= 500) {
         const name = cells[1]
         const country = cells[2]?.substring(0, 3).toUpperCase() || ''
 
@@ -65,7 +65,7 @@ export async function fetchCurrentRankings(): Promise<{
     }
   }
 
-  return rankings.slice(0, 150) // Top 150
+  return rankings.slice(0, 500) // Top 500
 }
 
 // WTA 2026 Tournament Calendar
