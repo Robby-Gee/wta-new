@@ -25,11 +25,24 @@ type Match = {
   player: Player
 }
 
+type Pick = {
+  id: string
+  pickType: string
+  pointsEarned: number
+  player: Player
+  user: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
 export default function AdminResultsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedTournament, setSelectedTournament] = useState<string>('')
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
+  const [picks, setPicks] = useState<Pick[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -67,9 +80,14 @@ export default function AdminResultsPage() {
   }
 
   const fetchMatches = async () => {
-    const res = await fetch(`/api/admin/results?tournamentId=${selectedTournament}`)
-    const data = await res.json()
-    setMatches(data)
+    const [matchesRes, picksRes] = await Promise.all([
+      fetch(`/api/admin/results?tournamentId=${selectedTournament}`),
+      fetch(`/api/admin/picks?tournamentId=${selectedTournament}`),
+    ])
+    const matchesData = await matchesRes.json()
+    const picksData = await picksRes.json()
+    setMatches(matchesData)
+    setPicks(picksData)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,6 +188,52 @@ export default function AdminResultsPage() {
 
           {selectedTournament && (
             <>
+              {/* Picks Summary */}
+              {picks.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+                  <h2 className="font-semibold mb-4">Players Picked ({[...new Set(picks.map(p => p.player.id))].length} unique players)</h2>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {/* Group picks by player */}
+                    {Object.entries(
+                      picks.reduce((acc, pick) => {
+                        if (!acc[pick.player.id]) {
+                          acc[pick.player.id] = { player: pick.player, users: [] }
+                        }
+                        acc[pick.player.id].users.push({
+                          name: pick.user.name || pick.user.email.split('@')[0],
+                          pickType: pick.pickType,
+                          pointsEarned: pick.pointsEarned,
+                        })
+                        return acc
+                      }, {} as Record<string, { player: Player; users: { name: string; pickType: string; pointsEarned: number }[] }>)
+                    )
+                      .sort((a, b) => a[1].player.wtaRanking - b[1].player.wtaRanking)
+                      .map(([playerId, { player, users }]) => (
+                        <div key={playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">
+                              #{player.wtaRanking} {player.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Picked by: {users.map(u => `${u.name} (${u.pickType === 'MAIN_DRAW' ? 'MD' : 'Q'})`).join(', ')}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, playerId: playerId })
+                              setPlayerSearch(player.name)
+                            }}
+                            className="text-sm text-wta-purple hover:underline"
+                          >
+                            Enter Result
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8">
                 <h2 className="font-semibold mb-4">
                   {editingMatch ? 'Edit Match Result' : 'Record Match Result'}
