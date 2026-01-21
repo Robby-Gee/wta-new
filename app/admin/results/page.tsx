@@ -33,7 +33,6 @@ type Pick = {
   user: {
     id: string
     name: string | null
-    email: string
   }
 }
 
@@ -200,7 +199,7 @@ export default function AdminResultsPage() {
                           acc[pick.player.id] = { player: pick.player, users: [] }
                         }
                         acc[pick.player.id].users.push({
-                          name: pick.user.name || pick.user.email.split('@')[0],
+                          name: pick.user.name || 'Anonymous',
                           pickType: pick.pickType,
                           pointsEarned: pick.pointsEarned,
                         })

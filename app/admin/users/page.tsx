@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 
 type User = {
   id: string
-  email: string
   name: string | null
   isAdmin: boolean
   hiddenFromLeaderboard: boolean
@@ -79,8 +78,7 @@ export default function AdminUsersPage() {
             {users.map(user => (
               <tr key={user.id} className="border-t">
                 <td className="px-4 py-3">
-                  <div className="font-medium">{user.name || 'No name'}</div>
-                  <div className="text-sm text-gray-500">{user.email}</div>
+                  <div className="font-medium">{user.name || 'Anonymous'}</div>
                 </td>
                 <td className="px-4 py-3 text-center">{user._count.picks}</td>
                 <td className="px-4 py-3 text-center font-bold text-green-600">{user.totalPoints}</td>
