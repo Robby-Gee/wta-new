@@ -8,6 +8,7 @@ type User = {
   isAdmin: boolean
   hiddenFromLeaderboard: boolean
   totalPoints: number
+  startingPoints: number
   createdAt: string
   _count: {
     picks: number
@@ -57,6 +58,15 @@ export default function AdminUsersPage() {
     fetchUsers()
   }
 
+  const updateStartingPoints = async (userId: string, startingPoints: number) => {
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startingPoints }),
+    })
+    fetchUsers()
+  }
+
   if (loading) return <div className="p-8">Loading...</div>
 
   return (
@@ -70,6 +80,7 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-left text-sm">User</th>
               <th className="px-4 py-3 text-center text-sm">Picks</th>
               <th className="px-4 py-3 text-center text-sm">Points</th>
+              <th className="px-4 py-3 text-center text-sm">Starting Pts</th>
               <th className="px-4 py-3 text-center text-sm">Status</th>
               <th className="px-4 py-3 text-right text-sm">Actions</th>
             </tr>
@@ -82,6 +93,24 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="px-4 py-3 text-center">{user._count.picks}</td>
                 <td className="px-4 py-3 text-center font-bold text-green-600">{user.totalPoints}</td>
+                <td className="px-4 py-3 text-center">
+                  <input
+                    type="number"
+                    defaultValue={user.startingPoints}
+                    className="w-16 text-center border rounded px-1 py-0.5"
+                    onBlur={(e) => {
+                      const value = parseInt(e.target.value) || 0
+                      if (value !== user.startingPoints) {
+                        updateStartingPoints(user.id, value)
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur()
+                      }
+                    }}
+                  />
+                </td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex flex-col gap-1 items-center">
                     {user.isAdmin && (

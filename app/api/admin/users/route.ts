@@ -17,6 +17,7 @@ export async function GET() {
       isAdmin: true,
       hiddenFromLeaderboard: true,
       totalPoints: true,
+      startingPoints: true,
       createdAt: true,
       _count: {
         select: { picks: true },

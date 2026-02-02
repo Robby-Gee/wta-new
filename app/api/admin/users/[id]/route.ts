@@ -15,13 +15,16 @@ export async function PATCH(
 
   try {
     const body = await request.json()
-    const updateData: { hiddenFromLeaderboard?: boolean; isAdmin?: boolean } = {}
+    const updateData: { hiddenFromLeaderboard?: boolean; isAdmin?: boolean; startingPoints?: number } = {}
 
     if (typeof body.hiddenFromLeaderboard === 'boolean') {
       updateData.hiddenFromLeaderboard = body.hiddenFromLeaderboard
     }
     if (typeof body.isAdmin === 'boolean') {
       updateData.isAdmin = body.isAdmin
+    }
+    if (typeof body.startingPoints === 'number') {
+      updateData.startingPoints = body.startingPoints
     }
 
     const user = await prisma.user.update({

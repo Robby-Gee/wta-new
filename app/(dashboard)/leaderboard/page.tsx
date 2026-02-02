@@ -18,7 +18,9 @@ export default async function LeaderboardPage() {
 
   // Calculate stats for each user
   const leaderboard = users.map(user => {
-    const totalPoints = user.picks.reduce((sum, pick) => sum + pick.pointsEarned, 0)
+    const earnedPoints = user.picks.reduce((sum, pick) => sum + pick.pointsEarned, 0)
+    const startingPoints = (user as typeof user & { startingPoints: number }).startingPoints || 0
+    const totalPoints = startingPoints + earnedPoints
     const totalSpent = user.picks.reduce((sum, pick) => sum + pick.player.cost, 0)
 
     return {
@@ -26,6 +28,8 @@ export default async function LeaderboardPage() {
       name: user.name || user.email.split('@')[0],
       email: user.email,
       totalPoints,
+      earnedPoints,
+      startingPoints,
       totalSpent,
       pickCount: user.picks.length,
     }
@@ -87,6 +91,11 @@ export default async function LeaderboardPage() {
                     <td className="px-4 py-3 text-right">
                       <span className="font-bold text-green-600">{user.totalPoints}</span>
                       <span className="text-gray-400 text-sm ml-1">pts</span>
+                      {user.startingPoints > 0 && (
+                        <div className="text-xs text-gray-400">
+                          ({user.startingPoints} + {user.earnedPoints})
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500">
                       {user.pickCount}

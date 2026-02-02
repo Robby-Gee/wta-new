@@ -1,71 +1,52 @@
 import { getPlayerCost } from './scoring'
 
-// Fetch current rankings by scraping Tennis Abstract (updated weekly, easier to parse)
+// Fetch current rankings by scraping ESPN WTA rankings
 export async function fetchCurrentRankings(): Promise<{
   name: string
   country: string
   wtaRanking: number
   cost: number
 }[]> {
-  const res = await fetch('https://tennisabstract.com/reports/wtaRankings.html', {
+  const res = await fetch('https://www.espn.com/tennis/rankings/_/type/wta', {
     cache: 'no-store',
   })
   const html = await res.text()
 
   const rankings: { name: string; country: string; wtaRanking: number; cost: number }[] = []
 
-  // Parse the HTML table - Tennis Abstract uses a simple table format
-  // Look for table rows with ranking data
-  const tableMatch = html.match(/<table[^>]*class="[^"]*tablesorter[^"]*"[^>]*>([\s\S]*?)<\/table>/i)
-  if (!tableMatch) {
-    console.error('Could not find rankings table')
-    return []
-  }
-
-  const tableContent = tableMatch[1]
-  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+  // Parse ESPN's table structure
+  // Find table rows in the rankings table
+  const rowRegex = /<tr[^>]*class="Table__TR[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi
   let rowMatch
 
-  while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+  while ((rowMatch = rowRegex.exec(html)) !== null) {
     const row = rowMatch[1]
 
-    // Extract cells
-    const cells: string[] = []
-    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi
-    let cellMatch
-    while ((cellMatch = cellRegex.exec(row)) !== null) {
-      // Strip HTML tags, decode entities, and trim
-      const cellText = cellMatch[1]
-        .replace(/<[^>]*>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .trim()
-      cells.push(cellText)
-    }
+    // Extract rank from span with class "rank_column"
+    const rankMatch = row.match(/<span[^>]*class="rank_column"[^>]*>(\d+)<\/span>/)
+    if (!rankMatch) continue
+    const rank = parseInt(rankMatch[1])
 
-    // Tennis Abstract format: Rank, Player, Country/Flag, Points, etc.
-    if (cells.length >= 3) {
-      const rank = parseInt(cells[0])
-      if (!isNaN(rank) && rank <= 500) {
-        const name = cells[1]
-        const country = cells[2]?.substring(0, 3).toUpperCase() || ''
+    // Extract player name from anchor tag with class "AnchorLink"
+    const nameMatch = row.match(/<a[^>]*class="AnchorLink"[^>]*>([^<]+)<\/a>/)
+    if (!nameMatch) continue
+    const name = nameMatch[1].trim()
 
-        if (name && name.length > 1) {
-          rankings.push({
-            name,
-            country,
-            wtaRanking: rank,
-            cost: getPlayerCost(rank),
-          })
-        }
-      }
+    // Extract country from img title attribute
+    const countryMatch = row.match(/<img[^>]*title="([^"]+)"[^>]*>/)
+    const country = countryMatch ? countryMatch[1].substring(0, 3).toUpperCase() : ''
+
+    if (name && name.length > 1 && rank >= 1) {
+      rankings.push({
+        name,
+        country,
+        wtaRanking: rank,
+        cost: getPlayerCost(rank),
+      })
     }
   }
 
-  return rankings.slice(0, 500) // Top 500
+  return rankings
 }
 
 // WTA 2026 Tournament Calendar

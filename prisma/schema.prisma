@@ -16,6 +16,7 @@ model User {
   isAdmin               Boolean   @default(false)
   hiddenFromLeaderboard Boolean   @default(false)
   totalPoints           Int       @default(0)
+  startingPoints        Int       @default(0)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   picks                 Pick[]
