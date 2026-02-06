@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   try {
     if (type === 'rankings') {
-      // Fetch latest rankings from Tennis Abstract
+      // Fetch latest rankings from ESPN
       const rankings = await fetchCurrentRankings()
 
       if (rankings.length === 0) {
@@ -26,18 +26,36 @@ export async function POST(request: Request) {
         }, { status: 500 })
       }
 
-      // Delete all existing players and replace with fresh data
-      // (This is cleaner than trying to merge/upsert)
-      await prisma.player.deleteMany({})
+      // Upsert players to preserve existing IDs (and thus picks)
+      let updated = 0
+      let created = 0
 
-      // Bulk create all players
-      await prisma.player.createMany({
-        data: rankings,
-      })
+      for (const player of rankings) {
+        const existing = await prisma.player.findFirst({
+          where: { name: player.name },
+        })
+
+        if (existing) {
+          await prisma.player.update({
+            where: { id: existing.id },
+            data: {
+              wtaRanking: player.wtaRanking,
+              cost: player.cost,
+              country: player.country,
+            },
+          })
+          updated++
+        } else {
+          await prisma.player.create({
+            data: player,
+          })
+          created++
+        }
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Synced ${rankings.length} players with current WTA rankings`,
+        message: `Synced rankings: ${updated} updated, ${created} new players`,
       })
     }
 
