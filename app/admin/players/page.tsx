@@ -152,42 +152,62 @@ export default function AdminPlayersPage() {
     setSaving(false)
   }
 
-  // Parse WTA PDF text - format: "1 Aryna Sabalenka BLR 10,990"
+  // Parse WTA PDF text - format: "1 (1) SABALENKA, ARYNA POL 10990 20 ..."
   const parseWtaRankings = (text: string) => {
     const lines = text.trim().split('\n')
     const players: { name: string; country: string | null; wtaRanking: number }[] = []
     const errors: string[] = []
+    const seenRanks = new Set<number>()
 
     for (const line of lines) {
       const trimmed = line.trim()
       if (!trimmed) continue
 
-      // Try to match: rank, name, 3-letter country code, points
-      // Pattern: starts with number, then name, then 3-letter code, then points
-      const match = trimmed.match(/^(\d+)\s+(.+?)\s+([A-Z]{3})\s+[\d,]+$/)
+      // Skip header/footer lines
+      if (trimmed.includes('Printed:') ||
+          trimmed.includes('WTA Singles') ||
+          trimmed.includes('As of:') ||
+          trimmed.startsWith('Rank Prior') ||
+          trimmed.startsWith('of ')) continue
+
+      // WTA PDF format: "1 (1) LASTNAME, FIRSTNAME [COUNTRY] POINTS ..."
+      // Country code is optional (some players like Russians don't have it)
+      // Last name can have spaces (e.g., "RAKOTOMANGA RAJAONAH")
+      const match = trimmed.match(/^(\d+)\s+\(\d+\)\s+([A-Z][A-Z\-' ]+),\s+([A-Z][A-Za-z\-' ]+?)(?:\s+([A-Z]{3}))?\s+(\d+)\s/)
+
       if (match) {
         const rank = parseInt(match[1])
-        const name = match[2].trim()
-        const country = match[3]
-        if (rank && name) {
+        // Skip if we've seen this rank (handles duplicate pastes)
+        if (seenRanks.has(rank)) continue
+        seenRanks.add(rank)
+
+        const lastName = match[2].trim()
+        const firstName = match[3].trim()
+        const country = match[4] || null
+
+        // Convert "SABALENKA, ARYNA" to "Aryna Sabalenka"
+        const formatName = (first: string, last: string) => {
+          const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+          const formatPart = (part: string) =>
+            part.split(/\s+/).map(word =>
+              word.split('-').map(titleCase).join('-')
+            ).join(' ')
+          return `${formatPart(first)} ${formatPart(last)}`
+        }
+
+        const name = formatName(firstName, lastName)
+
+        if (rank && name && rank <= 1000) {
           players.push({ name, country, wtaRanking: rank })
         }
-      } else {
-        // Try alternate format without points: "1 Aryna Sabalenka BLR"
-        const altMatch = trimmed.match(/^(\d+)\s+(.+?)\s+([A-Z]{3})$/)
-        if (altMatch) {
-          const rank = parseInt(altMatch[1])
-          const name = altMatch[2].trim()
-          const country = altMatch[3]
-          if (rank && name) {
-            players.push({ name, country, wtaRanking: rank })
-          }
-        } else if (/^\d+\s+\w/.test(trimmed)) {
-          // Has a rank but didn't match - might be useful to flag
-          errors.push(trimmed.substring(0, 50))
-        }
+      } else if (/^\d+\s+\(\d+\)/.test(trimmed)) {
+        // Has rank pattern but didn't match fully
+        errors.push(trimmed.substring(0, 60))
       }
     }
+
+    // Sort by rank
+    players.sort((a, b) => a.wtaRanking - b.wtaRanking)
 
     return { players, errors }
   }
