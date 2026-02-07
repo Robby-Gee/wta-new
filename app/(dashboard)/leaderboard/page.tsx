@@ -17,11 +17,12 @@ export default async function LeaderboardPage() {
   })
 
   // Calculate stats for each user
+  const STARTING_BUDGET = 50
   const leaderboard = users.map(user => {
     const earnedPoints = user.picks.reduce((sum, pick) => sum + pick.pointsEarned, 0)
     const startingPoints = (user as typeof user & { startingPoints: number }).startingPoints || 0
-    const totalPoints = startingPoints + earnedPoints
     const totalSpent = user.picks.reduce((sum, pick) => sum + pick.player.cost, 0)
+    const totalPoints = STARTING_BUDGET + startingPoints + earnedPoints - totalSpent
 
     return {
       id: user.id,
