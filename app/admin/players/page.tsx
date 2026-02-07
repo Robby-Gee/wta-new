@@ -26,6 +26,10 @@ export default function AdminPlayersPage() {
   const [saving, setSaving] = useState(false)
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkData, setBulkData] = useState('')
+  const [pasteMode, setPasteMode] = useState(false)
+  const [pasteData, setPasteData] = useState('')
+  const [parsedPlayers, setParsedPlayers] = useState<{ name: string; country: string | null; wtaRanking: number }[]>([])
+  const [parseError, setParseError] = useState('')
 
   useEffect(() => {
     fetchPlayers()
@@ -148,6 +152,81 @@ export default function AdminPlayersPage() {
     setSaving(false)
   }
 
+  // Parse WTA PDF text - format: "1 Aryna Sabalenka BLR 10,990"
+  const parseWtaRankings = (text: string) => {
+    const lines = text.trim().split('\n')
+    const players: { name: string; country: string | null; wtaRanking: number }[] = []
+    const errors: string[] = []
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+
+      // Try to match: rank, name, 3-letter country code, points
+      // Pattern: starts with number, then name, then 3-letter code, then points
+      const match = trimmed.match(/^(\d+)\s+(.+?)\s+([A-Z]{3})\s+[\d,]+$/)
+      if (match) {
+        const rank = parseInt(match[1])
+        const name = match[2].trim()
+        const country = match[3]
+        if (rank && name) {
+          players.push({ name, country, wtaRanking: rank })
+        }
+      } else {
+        // Try alternate format without points: "1 Aryna Sabalenka BLR"
+        const altMatch = trimmed.match(/^(\d+)\s+(.+?)\s+([A-Z]{3})$/)
+        if (altMatch) {
+          const rank = parseInt(altMatch[1])
+          const name = altMatch[2].trim()
+          const country = altMatch[3]
+          if (rank && name) {
+            players.push({ name, country, wtaRanking: rank })
+          }
+        } else if (/^\d+\s+\w/.test(trimmed)) {
+          // Has a rank but didn't match - might be useful to flag
+          errors.push(trimmed.substring(0, 50))
+        }
+      }
+    }
+
+    return { players, errors }
+  }
+
+  const handleParsePaste = () => {
+    const { players, errors } = parseWtaRankings(pasteData)
+    setParsedPlayers(players)
+    if (players.length === 0 && errors.length > 0) {
+      setParseError(`Could not parse any players. Sample unmatched lines: ${errors.slice(0, 3).join(', ')}`)
+    } else if (errors.length > 0) {
+      setParseError(`Parsed ${players.length} players. ${errors.length} lines skipped.`)
+    } else {
+      setParseError('')
+    }
+  }
+
+  const handlePasteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (parsedPlayers.length === 0) return
+    setSaving(true)
+
+    const res = await fetch('/api/admin/rankings/paste', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ players: parsedPlayers }),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      alert(`Rankings updated: ${data.updated} updated, ${data.created} new players`)
+      setPasteMode(false)
+      setPasteData('')
+      setParsedPlayers([])
+      fetchPlayers()
+    }
+
+    setSaving(false)
+  }
+
   if (loading) return <div className="p-8">Loading...</div>
 
   return (
@@ -156,19 +235,75 @@ export default function AdminPlayersPage() {
         <h1 className="text-3xl font-bold">Players ({players.length})</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => { setBulkMode(!bulkMode); setShowForm(false) }}
+            onClick={() => { setPasteMode(!pasteMode); setBulkMode(false); setShowForm(false); setParsedPlayers([]) }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg"
+          >
+            {pasteMode ? 'Cancel' : 'Paste Rankings'}
+          </button>
+          <button
+            onClick={() => { setBulkMode(!bulkMode); setShowForm(false); setPasteMode(false) }}
             className="bg-gray-600 text-white px-4 py-2 rounded-lg"
           >
             {bulkMode ? 'Cancel Bulk' : 'Bulk Add'}
           </button>
           <button
-            onClick={() => { setShowForm(!showForm); setBulkMode(false) }}
+            onClick={() => { setShowForm(!showForm); setBulkMode(false); setPasteMode(false) }}
             className="bg-wta-purple text-white px-4 py-2 rounded-lg"
           >
             {showForm ? 'Cancel' : 'Add Player'}
           </button>
         </div>
       </div>
+
+      {pasteMode && (
+        <form onSubmit={handlePasteSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="font-semibold mb-2">Paste WTA Rankings</h2>
+          <p className="text-sm text-gray-600 mb-2">
+            Copy text from the <a href="https://wtafiles.wtatennis.com/pdf/rankings/Singles_Numeric.pdf" target="_blank" className="text-blue-600 underline">WTA Rankings PDF</a> and paste below.
+            Expected format: &quot;1 Aryna Sabalenka BLR 10,990&quot; per line.
+          </p>
+          <textarea
+            value={pasteData}
+            onChange={e => { setPasteData(e.target.value); setParsedPlayers([]) }}
+            className="w-full px-3 py-2 border rounded-lg h-48 font-mono text-sm"
+            placeholder="Paste rankings text here..."
+          />
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={handleParsePaste}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg"
+            >
+              Preview Parse
+            </button>
+            {parsedPlayers.length > 0 && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-wta-purple text-white px-6 py-2 rounded-lg disabled:opacity-50"
+              >
+                {saving ? 'Updating...' : `Update ${parsedPlayers.length} Players`}
+              </button>
+            )}
+          </div>
+          {parseError && (
+            <p className="mt-2 text-sm text-orange-600">{parseError}</p>
+          )}
+          {parsedPlayers.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium mb-2">Preview (first 10):</p>
+              <div className="text-sm bg-gray-50 p-3 rounded max-h-40 overflow-y-auto">
+                {parsedPlayers.slice(0, 10).map((p, i) => (
+                  <div key={i}>#{p.wtaRanking} {p.name} ({p.country}) - Cost: {getPlayerCost(p.wtaRanking)}</div>
+                ))}
+                {parsedPlayers.length > 10 && (
+                  <div className="text-gray-500">...and {parsedPlayers.length - 10} more</div>
+                )}
+              </div>
+            </div>
+          )}
+        </form>
+      )}
 
       {bulkMode && (
         <form onSubmit={handleBulkSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8">
