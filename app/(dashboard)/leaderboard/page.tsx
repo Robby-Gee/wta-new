@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import Link from 'next/link'
 
 export default async function LeaderboardPage() {
   const session = await getServerSession(authOptions)
@@ -63,43 +64,51 @@ export default async function LeaderboardPage() {
                 return (
                   <tr
                     key={user.id}
-                    className={`border-b last:border-0 ${
-                      isCurrentUser ? 'bg-wta-purple/5' : ''
+                    className={`border-b last:border-0 hover:bg-gray-50 transition-colors ${
+                      isCurrentUser ? 'bg-wta-purple/5 hover:bg-wta-purple/10' : ''
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <span className={`font-bold ${
-                        rank === 1 ? 'text-yellow-500' :
-                        rank === 2 ? 'text-gray-400' :
-                        rank === 3 ? 'text-amber-600' : ''
-                      }`}>
-                        {rank === 1 && '🥇 '}
-                        {rank === 2 && '🥈 '}
-                        {rank === 3 && '🥉 '}
-                        #{rank}
-                      </span>
+                      <Link href={`/leaderboard/${user.id}`} className="block">
+                        <span className={`font-bold ${
+                          rank === 1 ? 'text-yellow-500' :
+                          rank === 2 ? 'text-gray-400' :
+                          rank === 3 ? 'text-amber-600' : ''
+                        }`}>
+                          {rank === 1 && '🥇 '}
+                          {rank === 2 && '🥈 '}
+                          {rank === 3 && '🥉 '}
+                          #{rank}
+                        </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {user.name}
-                        {isCurrentUser && (
-                          <span className="ml-2 text-xs bg-wta-purple text-white px-2 py-0.5 rounded">
-                            You
-                          </span>
-                        )}
-                      </div>
+                      <Link href={`/leaderboard/${user.id}`} className="block">
+                        <div className="font-medium">
+                          {user.name}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs bg-wta-purple text-white px-2 py-0.5 rounded">
+                              You
+                            </span>
+                          )}
+                        </div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-bold text-green-600">{user.totalPoints}</span>
-                      <span className="text-gray-400 text-sm ml-1">pts</span>
-                      {user.startingPoints > 0 && (
-                        <div className="text-xs text-gray-400">
-                          ({user.startingPoints} + {user.earnedPoints})
-                        </div>
-                      )}
+                      <Link href={`/leaderboard/${user.id}`} className="block">
+                        <span className="font-bold text-green-600">{user.totalPoints}</span>
+                        <span className="text-gray-400 text-sm ml-1">pts</span>
+                        {user.startingPoints > 0 && (
+                          <div className="text-xs text-gray-400">
+                            ({user.startingPoints} + {user.earnedPoints})
+                          </div>
+                        )}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500">
-                      {user.pickCount}
+                      <Link href={`/leaderboard/${user.id}`} className="block">
+                        {user.pickCount}
+                      </Link>
                     </td>
                   </tr>
                 )
